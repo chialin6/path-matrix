@@ -80,7 +80,16 @@ class Arrival:
         return " ".join(str(max(0, s) // 60) for s in self.seconds_list)
 
 
-def get_arrivals(station_code: str, direction: str = "ToNY", max_trains: int = 2) -> list:
+def _parse_last_updated(ts: str) -> str:
+    """Extract HH:MM from ISO 8601 timestamp: '2026-07-11T11:15:07.326228-04:00' → '11:15'."""
+    try:
+        return ts[11:16]
+    except Exception:
+        return ""
+
+
+def get_arrivals(station_code: str, direction: str = "ToNY", max_trains: int = 2):
+    """Return (list[Arrival], last_updated_str) where last_updated_str is 'HH:MM' or ''."""
     resp = requests.get(API_URL, timeout=8)
     resp.raise_for_status()
     data = resp.json()
@@ -90,17 +99,18 @@ def get_arrivals(station_code: str, direction: str = "ToNY", max_trains: int = 2
         None,
     )
     if not station_data:
-        return []
+        return [], ""
 
     dir_data = next(
         (d for d in station_data["destinations"] if d["label"] == direction),
         None,
     )
     if not dir_data:
-        return []
+        return [], ""
 
     # One row per train, already sorted by arrival time from the API
     arrivals = []
+    last_updated = ""
     for msg in dir_data["messages"][:max_trains]:
         arrivals.append(Arrival(
             headsign=msg["headSign"],
@@ -109,7 +119,9 @@ def get_arrivals(station_code: str, direction: str = "ToNY", max_trains: int = 2
             seconds_list=[max(0, int(msg["secondsToArrival"]))],
             message_list=[msg["arrivalTimeMessage"]],
         ))
-    return arrivals
+        if not last_updated:
+            last_updated = _parse_last_updated(msg.get("lastUpdated", ""))
+    return arrivals, last_updated
 
 
 if __name__ == "__main__":
@@ -117,7 +129,8 @@ if __name__ == "__main__":
 
     station = sys.argv[1] if len(sys.argv) > 1 else "GRV"
     direction = sys.argv[2] if len(sys.argv) > 2 else "ToNY"
-    arrivals = get_arrivals(station, direction)
+    arrivals, last_updated = get_arrivals(station, direction)
+    print(f"Last updated: {last_updated}")
     for a in arrivals:
         r, g, b = a.color
         print(

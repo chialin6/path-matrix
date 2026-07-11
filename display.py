@@ -67,13 +67,13 @@ class MatrixDisplay:
         self.matrix = RGBMatrix(options=options)
         self.canvas = self.matrix.CreateFrameCanvas()
 
-    def render(self, arrivals):
+    def render(self, arrivals, last_updated=""):
         if HAS_MATRIX:
-            self._render_matrix(arrivals)
+            self._render_matrix(arrivals, last_updated)
         else:
-            self._render_terminal(arrivals)
+            self._render_terminal(arrivals, last_updated)
 
-    def _render_matrix(self, arrivals):
+    def _render_matrix(self, arrivals, last_updated=""):
         self.canvas.Clear()
 
         fmt = getattr(self.args, 'time_format', 'minutes')
@@ -81,12 +81,12 @@ class MatrixDisplay:
         grey = rgb_graphics.Color(110, 110, 110)
 
         # Header row: small grey text at top using 4x6 font
-        now = datetime.now().strftime("%H:%M")
-        rgb_graphics.DrawText(self.canvas, self.font_small, 1, 6, grey, f"updated {now}")
+        ts = last_updated if last_updated else datetime.now().strftime("%H:%M")
+        rgb_graphics.DrawText(self.canvas, self.font_small, 1, 6, grey, f"updated at {ts}")
 
         # Two arrival rows using 6x9 font
-        # Layout: circle dot (radius 2) + 3px gap + name + times at fixed col
-        dot_radius = 2
+        # Layout: circle dot (radius 3) + gap + name + times at fixed col
+        dot_radius = 3
         dot_cx = 3        # circle center x
         text_x = 9        # text starts after dot (3 + 2 + gap 4)
         times_x = 40      # fixed column for arrival times (extra space from name)
@@ -108,11 +108,11 @@ class MatrixDisplay:
 
         self.canvas = self.matrix.SwapOnVSync(self.canvas)
 
-    def _render_terminal(self, arrivals):
+    def _render_terminal(self, arrivals, last_updated=""):
         fmt = getattr(self.args, 'time_format', 'minutes')
         print("\033[H\033[J", end="")
-        now = datetime.now().strftime("%H:%M")
-        print(f"{ANSI_DIM}updated {now}{ANSI_RESET}")
+        ts = last_updated if last_updated else datetime.now().strftime("%H:%M")
+        print(f"{ANSI_DIM}updated at {ts}{ANSI_RESET}")
         print("─" * 30)
 
         if not arrivals:

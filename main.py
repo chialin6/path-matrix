@@ -31,8 +31,8 @@ def main():
     try:
         while True:
             try:
-                arrivals = get_arrivals(args.station, args.direction)
-                display.render(arrivals)
+                arrivals, last_updated = get_arrivals(args.station, args.direction)
+                display.render(arrivals, last_updated)
             except Exception as e:
                 print(f"Error fetching arrivals: {e}", file=sys.stderr)
             time.sleep(20)
