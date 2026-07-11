@@ -8,7 +8,7 @@ try:
 except ImportError:
     HAS_MATRIX = False
 
-from config import TICKER_INTERVAL
+from config import TICKER_INTERVAL, RAIN_LOOKAHEAD_HOURS
 
 ANSI_RESET = "\033[0m"
 ANSI_DIM = "\033[2m"
@@ -92,7 +92,7 @@ class MatrixDisplay:
             if w.rain_hour:
                 return f"rain @ {w.rain_hour} {w.rain_prob}%"
             else:
-                return "no rain today"
+                return f"no rain in {RAIN_LOOKAHEAD_HOURS}hrs"
         elif frame == _FRAME_UPDATED and self._last_updated:
             return f"updated @ {self._last_updated}"
         return ""

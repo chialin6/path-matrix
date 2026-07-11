@@ -2,7 +2,7 @@
 import requests
 from dataclasses import dataclass
 
-from config import WEATHER_LAT, WEATHER_LON, RAIN_THRESHOLD_PCT
+from config import WEATHER_LAT, WEATHER_LON, RAIN_THRESHOLD_PCT, RAIN_LOOKAHEAD_HOURS
 
 WEATHER_API_URL = "https://api.open-meteo.com/v1/forecast"
 
@@ -56,8 +56,8 @@ def get_weather() -> WeatherData:
         current_idx = 0
 
     # Scan next 8 hours for peak rain probability
-    window_times = hourly_times[current_idx: current_idx + 8]
-    window_probs = hourly_probs[current_idx: current_idx + 8]
+    window_times = hourly_times[current_idx: current_idx + RAIN_LOOKAHEAD_HOURS]
+    window_probs = hourly_probs[current_idx: current_idx + RAIN_LOOKAHEAD_HOURS]
 
     rain_hour = ""
     rain_prob = 0
