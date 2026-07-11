@@ -7,7 +7,7 @@ isn't installed, so you can develop/test on a regular machine.
 
 ## Demo
 
-https://github.com/chialin6/path-matrix/raw/main/matrix-demo.MOV
+![Demo of PATH train and weather display on the LED matrix](matrix-demo.gif)
 
 ## Setup
 
