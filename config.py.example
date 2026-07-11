@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+# Copy this file to config.py and fill in your own values.
+# config.py is gitignored so your station/location stay local.
+
+# PATH station code to display (e.g. "GRV" = Grove Street, "HOB" = Hoboken,
+# "WTC" = World Trade Center, "JSQ" = Journal Square, "NWK" = Newark,
+# "23S"/"14S"/"09S" = 23rd/14th/9th St, "33S" = 33rd St, "CHR" = Christopher St)
+STATION = "WTC"
+
+# Direction to show: "ToNY" or "ToNJ"
+DIRECTION = "ToNY"
+
+# Coordinates for the weather forecast (used by Open-Meteo).
+# Replace with your own location's latitude/longitude, e.g. from
+# Google Maps -> right-click -> "What's here?"
+WEATHER_LAT = 0.0
+WEATHER_LON = 0.0
+
+RAIN_THRESHOLD_PCT = 30      # minimum % probability to show a rain warning
+RAIN_LOOKAHEAD_HOURS = 8     # how many hours ahead to check for rain
+PATH_POLL_INTERVAL = 20      # seconds between PATH API calls
+WEATHER_POLL_INTERVAL = 900  # seconds between weather API calls (15 min)
+TICKER_INTERVAL = 4          # seconds each header frame is shown

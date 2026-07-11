@@ -59,7 +59,7 @@ class MatrixDisplay:
 
     def _init_matrix(self):
         # Load fonts before RGBMatrix init: the library drops root privileges
-        # to uid=daemon after hardware setup, losing access to /home/chialin6/.
+        # to uid=daemon after hardware setup, losing access to the user's home dir.
         font_path = getattr(self.args, 'font_path',
                             os.path.join(FONTS_DIR, "6x9.bdf"))
         self.font = rgb_graphics.Font()

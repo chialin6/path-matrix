@@ -4,7 +4,7 @@ import os
 import time
 import sys
 
-from config import PATH_POLL_INTERVAL, WEATHER_POLL_INTERVAL
+from config import PATH_POLL_INTERVAL, WEATHER_POLL_INTERVAL, STATION, DIRECTION
 from path_client import get_arrivals
 from weather_client import get_weather
 from display import MatrixDisplay
@@ -12,8 +12,8 @@ from display import MatrixDisplay
 
 def main():
     parser = argparse.ArgumentParser(description="PATH Train LED Matrix Display")
-    parser.add_argument("--station", default="GRV", help="Station code (default: GRV = Grove Street)")
-    parser.add_argument("--direction", default="ToNY", help="Direction: ToNY or ToNJ (default: ToNY)")
+    parser.add_argument("--station", default=STATION, help=f"Station code (default from config.py: {STATION})")
+    parser.add_argument("--direction", default=DIRECTION, help=f"Direction: ToNY or ToNJ (default from config.py: {DIRECTION})")
     parser.add_argument("--led-gpio-mapping", default="adafruit-hat")
     parser.add_argument("--led-slowdown-gpio", type=int, default=4)
     parser.add_argument(

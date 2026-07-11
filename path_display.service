@@ -4,8 +4,8 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-ExecStart=/usr/bin/python3 /home/chialin6/path-matrix/main.py --station GRV
-WorkingDirectory=/home/chialin6/path-matrix
+ExecStart=/usr/bin/python3 __PATH_MATRIX_DIR__/main.py
+WorkingDirectory=__PATH_MATRIX_DIR__
 Restart=always
 RestartSec=10
 User=root
