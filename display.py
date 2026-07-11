@@ -85,13 +85,13 @@ class MatrixDisplay:
 
         # Header row: small grey text at top using 4x6 font
         if self._last_updated:
-            rgb_graphics.DrawText(self.canvas, self.font_small, 1, 6, grey, f"updated at {self._last_updated}")
+            rgb_graphics.DrawText(self.canvas, self.font_small, 1, 6, grey, f"updated @ {self._last_updated}")
 
         # Two arrival rows using 6x9 font
         # Layout: circle dot (radius 3) + gap + name + times at fixed col
         dot_radius = 3
-        dot_cx = 3        # circle center x
-        text_x = 9        # text starts after dot (3 + 2 + gap 4)
+        dot_cx = 4        # circle center x (1px left padding from edge)
+        text_x = 11       # text starts after dot + 1px extra gap
         times_x = 40      # fixed column for arrival times (extra space from name)
         row_baselines = [17, 28]
 
@@ -115,7 +115,7 @@ class MatrixDisplay:
         fmt = getattr(self.args, 'time_format', 'minutes')
         print("\033[H\033[J", end="")
         if self._last_updated:
-            print(f"{ANSI_DIM}updated at {self._last_updated}{ANSI_RESET}")
+            print(f"{ANSI_DIM}updated @ {self._last_updated}{ANSI_RESET}")
         print("─" * 30)
 
         if not arrivals:
