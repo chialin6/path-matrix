@@ -17,13 +17,6 @@ def _ansi_fg(r, g, b):
     return f"\033[38;2;{r};{g};{b}m"
 
 
-def _get_times(arrival, fmt):
-    if fmt == 'mmss':
-        return arrival.times_mmss()
-    elif fmt == 'minutes':
-        return arrival.times_minutes()
-    return arrival.times_message()
-
 
 def _draw_circle(canvas, cx, cy, radius, colors):
     """Draw a filled circle. Two colors = left/right split for combined routes."""
@@ -79,7 +72,6 @@ class MatrixDisplay:
     def _render_matrix(self, arrivals):
         self.canvas.Clear()
 
-        fmt = getattr(self.args, 'time_format', 'minutes')
         white = rgb_graphics.Color(255, 255, 255)
         grey = rgb_graphics.Color(110, 110, 110)
 
@@ -92,7 +84,7 @@ class MatrixDisplay:
         dot_radius = 3
         dot_cx = 4        # circle center x (1px left padding from edge)
         text_x = 11       # text starts after dot + 1px extra gap
-        times_x = 40      # fixed column for arrival times (extra space from name)
+        times_x = 52      # fixed column for arrival times (6-char name ends at x=46, 5px gap)
         row_baselines = [17, 28]
 
         for i, arrival in enumerate(arrivals[:2]):
@@ -107,12 +99,11 @@ class MatrixDisplay:
             rgb_graphics.DrawText(self.canvas, self.font, text_x, y, white, arrival.abbreviated)
 
             # Arrival times
-            rgb_graphics.DrawText(self.canvas, self.font, times_x, y, white, _get_times(arrival, fmt))
+            rgb_graphics.DrawText(self.canvas, self.font, times_x, y, white, arrival.times_minutes())
 
         self.canvas = self.matrix.SwapOnVSync(self.canvas)
 
     def _render_terminal(self, arrivals):
-        fmt = getattr(self.args, 'time_format', 'minutes')
         print("\033[H\033[J", end="")
         if self._last_updated:
             print(f"{ANSI_DIM}updated @ {self._last_updated}{ANSI_RESET}")
@@ -130,4 +121,4 @@ class MatrixDisplay:
             else:
                 r, g, b = arrival.color
                 dot = f"{_ansi_fg(r, g, b)}●{ANSI_RESET}"
-            print(f"{dot} {arrival.abbreviated:<6} {_get_times(arrival, fmt)}")
+            print(f"{dot} {arrival.abbreviated:<6} {arrival.times_minutes()}")
