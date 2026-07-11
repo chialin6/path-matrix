@@ -5,6 +5,10 @@ temp, rain forecast, last-updated time) on a 64x32 RGB LED matrix driven by
 a Raspberry Pi. Falls back to a terminal preview if the `rgbmatrix` library
 isn't installed, so you can develop/test on a regular machine.
 
+## Demo
+
+https://github.com/chialin6/path-matrix/raw/main/matrix-demo.MOV
+
 ## Setup
 
 1. Install Python dependencies:
