@@ -84,7 +84,7 @@ class MatrixDisplay:
         dot_radius = 3
         dot_cx = 4        # circle center x (1px left padding from edge)
         text_x = 11       # text starts after dot + 1px extra gap
-        times_x = 52      # fixed column for arrival times (6-char name ends at x=46, 5px gap)
+        times_x = 46      # fixed column for arrival times (5-char name ends at x=40, 5px gap)
         row_baselines = [17, 28]
 
         for i, arrival in enumerate(arrivals[:2]):
@@ -99,7 +99,7 @@ class MatrixDisplay:
             rgb_graphics.DrawText(self.canvas, self.font, text_x, y, white, arrival.abbreviated)
 
             # Arrival times
-            rgb_graphics.DrawText(self.canvas, self.font, times_x, y, white, arrival.times_minutes())
+            rgb_graphics.DrawText(self.canvas, self.font, times_x, y, white, arrival.times_message())
 
         self.canvas = self.matrix.SwapOnVSync(self.canvas)
 
@@ -121,4 +121,4 @@ class MatrixDisplay:
             else:
                 r, g, b = arrival.color
                 dot = f"{_ansi_fg(r, g, b)}●{ANSI_RESET}"
-            print(f"{dot} {arrival.abbreviated:<6} {arrival.times_minutes()}")
+            print(f"{dot} {arrival.abbreviated:<5} {arrival.times_message()}")

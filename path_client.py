@@ -13,15 +13,15 @@ TARGET_ABBREVIATIONS = {
     "33S": "33St",
     "WTC": "WTC",
     "JSQ": "JSQ",
-    "NWK": "Newark",
+    "NWK": "NWK",
     "HOB": "HOB",
-    "CHR": "Chr St",
+    "CHR": "ChrSt",
     "09S": "9St",
     "14S": "14St",
     "23S": "23St",
-    "NEW": "Newark",
-    "HAR": "HARRSN",
-    "EXP": "EXC PL",
+    "NEW": "NWK",
+    "HAR": "HARSN",
+    "EXP": "ExcPl",
 }
 
 # Abbreviate API message strings to fit the display
