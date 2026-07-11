@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+from datetime import datetime
 
 try:
     from rgbmatrix import RGBMatrix, RGBMatrixOptions, graphics as rgb_graphics
@@ -8,27 +9,51 @@ except ImportError:
     HAS_MATRIX = False
 
 ANSI_RESET = "\033[0m"
+ANSI_DIM = "\033[2m"
+
+FONTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
 
 
 def _ansi_fg(r, g, b):
     return f"\033[38;2;{r};{g};{b}m"
 
 
+def _get_times(arrival, fmt):
+    if fmt == 'mmss':
+        return arrival.times_mmss()
+    elif fmt == 'minutes':
+        return arrival.times_minutes()
+    return arrival.times_message()
+
+
+def _draw_circle(canvas, cx, cy, radius, r, g, b):
+    for dy in range(-radius, radius + 1):
+        for dx in range(-radius, radius + 1):
+            if dx * dx + dy * dy <= radius * radius:
+                canvas.SetPixel(cx + dx, cy + dy, r, g, b)
+
+
 class MatrixDisplay:
     def __init__(self, args):
         self.args = args
         self.matrix = None
-        self.font = None
+        self.font = None        # 6x9 for arrival rows
+        self.font_small = None  # 4x6 for header
         self.canvas = None
 
         if HAS_MATRIX:
             self._init_matrix()
 
     def _init_matrix(self):
-        # Load font before RGBMatrix init: the library drops root privileges
+        # Load fonts before RGBMatrix init: the library drops root privileges
         # to uid=daemon after hardware setup, losing access to /home/chialin6/.
+        font_path = getattr(self.args, 'font_path',
+                            os.path.join(FONTS_DIR, "6x9.bdf"))
         self.font = rgb_graphics.Font()
-        self.font.LoadFont(self.args.font_path)
+        self.font.LoadFont(font_path)
+
+        self.font_small = rgb_graphics.Font()
+        self.font_small.LoadFont(os.path.join(FONTS_DIR, "4x6.bdf"))
 
         options = RGBMatrixOptions()
         options.hardware_mapping = self.args.led_gpio_mapping
@@ -47,36 +72,43 @@ class MatrixDisplay:
     def _render_matrix(self, arrivals):
         self.canvas.Clear()
 
-        # Layout constants for 64x32 display with 5x8 font
-        row_baselines = [10, 26]  # y baselines for rows 1 and 2
-        dot_x = 1
-        dot_size = 3
-        text_x = 6   # x start for destination abbreviation
-        times_x = 32  # fixed x column for arrival times
-
+        fmt = getattr(self.args, 'time_format', 'minutes')
         white = rgb_graphics.Color(255, 255, 255)
+        grey = rgb_graphics.Color(110, 110, 110)
+
+        # Header row: small grey text at top using 4x6 font
+        now = datetime.now().strftime("%H:%M")
+        rgb_graphics.DrawText(self.canvas, self.font_small, 1, 6, grey, f"updated {now}")
+
+        # Two arrival rows using 6x9 font
+        # Layout: circle dot (radius 2) + 3px gap + name + times at fixed col
+        dot_radius = 2
+        dot_cx = 3        # circle center x
+        text_x = 9        # text starts after dot (3 + 2 + gap 4)
+        times_x = 40      # fixed column for arrival times (extra space from name)
+        row_baselines = [17, 28]
 
         for i, arrival in enumerate(arrivals[:2]):
             y = row_baselines[i]
             r, g, b = arrival.color
 
-            # Draw colored 3x3 dot, vertically centered near text baseline
-            dot_y_top = y - dot_size - 1
-            for dy in range(dot_size):
-                for dx in range(dot_size):
-                    self.canvas.SetPixel(dot_x + dx, dot_y_top + dy, r, g, b)
+            # Circle dot centered vertically on the text
+            dot_cy = y - 3
+            _draw_circle(self.canvas, dot_cx, dot_cy, dot_radius, r, g, b)
 
-            # Draw destination abbreviation
+            # Destination abbreviation
             rgb_graphics.DrawText(self.canvas, self.font, text_x, y, white, arrival.abbreviated)
 
-            # Draw arrival times at fixed column
-            rgb_graphics.DrawText(self.canvas, self.font, times_x, y, white, arrival.times_str)
+            # Arrival times
+            rgb_graphics.DrawText(self.canvas, self.font, times_x, y, white, _get_times(arrival, fmt))
 
         self.canvas = self.matrix.SwapOnVSync(self.canvas)
 
     def _render_terminal(self, arrivals):
-        print("\033[H\033[J", end="")  # clear screen
-        print("PATH Arrivals  (Ctrl+C to stop)")
+        fmt = getattr(self.args, 'time_format', 'minutes')
+        print("\033[H\033[J", end="")
+        now = datetime.now().strftime("%H:%M")
+        print(f"{ANSI_DIM}updated {now}{ANSI_RESET}")
         print("─" * 30)
 
         if not arrivals:
@@ -86,4 +118,4 @@ class MatrixDisplay:
         for arrival in arrivals[:2]:
             r, g, b = arrival.color
             dot = f"{_ansi_fg(r, g, b)}●{ANSI_RESET}"
-            print(f"{dot} {arrival.abbreviated:<6} {arrival.times_str}")
+            print(f"{dot} {arrival.abbreviated:<6} {_get_times(arrival, fmt)}")

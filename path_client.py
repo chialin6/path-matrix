@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import requests
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 API_URL = "https://www.panynj.gov/bin/portauthority/ridepath.json"
 
@@ -16,32 +16,58 @@ ABBREVIATIONS = {
     "23rd Street": "23St",
 }
 
+# Abbreviate API message strings to fit the display
+MESSAGE_ABBREV = {
+    "Arriving": "Now",
+    "Boarding": "Now",
+}
+
 
 def _hex_to_rgb(hex_str: str) -> tuple:
     h = hex_str.lstrip("#")
     return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
 
 
+def _mmss(seconds: int) -> str:
+    seconds = max(0, seconds)
+    return f"{seconds // 60}:{seconds % 60:02d}"
+
+
+def _abbrev_message(msg: str) -> str:
+    """Shorten API message strings: '4 min' -> '4m', 'Arriving' -> 'Now'."""
+    if msg in MESSAGE_ABBREV:
+        return MESSAGE_ABBREV[msg]
+    if msg.endswith(" min"):
+        return msg[: -len(" min")] + "m"
+    return msg
+
+
 @dataclass
 class Arrival:
     headsign: str
-    minutes_list: list
     color: tuple
+    seconds_list: list = field(default_factory=list)
+    message_list: list = field(default_factory=list)
 
     @property
     def abbreviated(self) -> str:
         return ABBREVIATIONS.get(self.headsign, self.headsign[:4])
 
     @property
-    def next_minutes(self) -> int:
-        return self.minutes_list[0] if self.minutes_list else 999
+    def next_seconds(self) -> int:
+        return self.seconds_list[0] if self.seconds_list else 999999
 
-    @property
-    def times_str(self) -> str:
-        return " ".join(str(m) for m in self.minutes_list)
+    def times_message(self) -> str:
+        return " ".join(_abbrev_message(m) for m in self.message_list)
+
+    def times_mmss(self) -> str:
+        return " ".join(_mmss(s) for s in self.seconds_list)
+
+    def times_minutes(self) -> str:
+        return " ".join(str(max(0, s) // 60) for s in self.seconds_list)
 
 
-def get_arrivals(station_code: str, direction: str = "ToNY", max_per_dest: int = 3) -> list:
+def get_arrivals(station_code: str, direction: str = "ToNY", max_trains: int = 2) -> list:
     resp = requests.get(API_URL, timeout=8)
     resp.raise_for_status()
     data = resp.json()
@@ -60,22 +86,15 @@ def get_arrivals(station_code: str, direction: str = "ToNY", max_per_dest: int =
     if not dir_data:
         return []
 
-    by_dest = {}
-    for msg in dir_data["messages"]:
-        headsign = msg["headSign"]
-        minutes = max(0, int(msg["secondsToArrival"]) // 60)
-        color = _hex_to_rgb(msg["lineColor"])
-
-        if headsign not in by_dest:
-            by_dest[headsign] = {"minutes": [], "color": color}
-        if len(by_dest[headsign]["minutes"]) < max_per_dest:
-            by_dest[headsign]["minutes"].append(minutes)
-
-    arrivals = [
-        Arrival(headsign=k, minutes_list=v["minutes"], color=v["color"])
-        for k, v in by_dest.items()
-    ]
-    arrivals.sort(key=lambda a: a.next_minutes)
+    # One row per train, already sorted by arrival time from the API
+    arrivals = []
+    for msg in dir_data["messages"][:max_trains]:
+        arrivals.append(Arrival(
+            headsign=msg["headSign"],
+            color=_hex_to_rgb(msg["lineColor"]),
+            seconds_list=[max(0, int(msg["secondsToArrival"]))],
+            message_list=[msg["arrivalTimeMessage"]],
+        ))
     return arrivals
 
 
@@ -87,4 +106,7 @@ if __name__ == "__main__":
     arrivals = get_arrivals(station, direction)
     for a in arrivals:
         r, g, b = a.color
-        print(f"\033[38;2;{r};{g};{b}m●\033[0m {a.abbreviated:<6} {a.times_str}")
+        print(
+            f"\033[38;2;{r};{g};{b}m●\033[0m {a.abbreviated:<6}"
+            f"  msg={a.times_message():<8}  mmss={a.times_mmss()}"
+        )

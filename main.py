@@ -12,13 +12,15 @@ def main():
     parser = argparse.ArgumentParser(description="PATH Train LED Matrix Display")
     parser.add_argument("--station", default="GRV", help="Station code (default: GRV = Grove Street)")
     parser.add_argument("--direction", default="ToNY", help="Direction: ToNY or ToNJ (default: ToNY)")
+    parser.add_argument("--time-format", default="message", choices=["message", "mmss", "minutes"],
+                        help="Time display: 'message' (4m), 'mmss' (4:32), 'minutes' (4)")
     parser.add_argument("--led-gpio-mapping", default="adafruit-hat")
     parser.add_argument("--led-rows", type=int, default=32)
     parser.add_argument("--led-cols", type=int, default=64)
     parser.add_argument("--led-slowdown-gpio", type=int, default=4)
     parser.add_argument(
         "--font-path",
-        default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts", "5x8.bdf"),
+        default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts", "6x9.bdf"),
         help="Path to BDF font file for matrix display",
     )
     args = parser.parse_args()
