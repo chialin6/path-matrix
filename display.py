@@ -26,10 +26,14 @@ def _get_times(arrival, fmt):
     return arrival.times_message()
 
 
-def _draw_circle(canvas, cx, cy, radius, r, g, b):
+def _draw_circle(canvas, cx, cy, radius, colors):
+    """Draw a filled circle. Two colors = left/right split for combined routes."""
+    c1 = colors[0]
+    c2 = colors[1] if len(colors) > 1 else None
     for dy in range(-radius, radius + 1):
         for dx in range(-radius, radius + 1):
             if dx * dx + dy * dy <= radius * radius:
+                r, g, b = c2 if (c2 is not None and dx >= 0) else c1
                 canvas.SetPixel(cx + dx, cy + dy, r, g, b)
 
 
@@ -94,7 +98,7 @@ class MatrixDisplay:
 
             # Circle dot centered vertically on the text
             dot_cy = y - 3
-            _draw_circle(self.canvas, dot_cx, dot_cy, dot_radius, r, g, b)
+            _draw_circle(self.canvas, dot_cx, dot_cy, dot_radius, arrival.colors)
 
             # Destination abbreviation
             rgb_graphics.DrawText(self.canvas, self.font, text_x, y, white, arrival.abbreviated)
@@ -116,6 +120,11 @@ class MatrixDisplay:
             return
 
         for arrival in arrivals[:2]:
-            r, g, b = arrival.color
-            dot = f"{_ansi_fg(r, g, b)}●{ANSI_RESET}"
+            if len(arrival.colors) > 1:
+                r1, g1, b1 = arrival.colors[0]
+                r2, g2, b2 = arrival.colors[1]
+                dot = f"{_ansi_fg(r1,g1,b1)}◐{ANSI_RESET}{_ansi_fg(r2,g2,b2)}◑{ANSI_RESET}"
+            else:
+                r, g, b = arrival.color
+                dot = f"{_ansi_fg(r, g, b)}●{ANSI_RESET}"
             print(f"{dot} {arrival.abbreviated:<6} {_get_times(arrival, fmt)}")

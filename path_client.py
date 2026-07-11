@@ -4,16 +4,20 @@ from dataclasses import dataclass, field
 
 API_URL = "https://www.panynj.gov/bin/portauthority/ridepath.json"
 
-ABBREVIATIONS = {
-    "33rd Street": "33St",
-    "World Trade Center": "WTC",
-    "Journal Square": "JSQ",
-    "Newark": "Nwk",
-    "Hoboken": "HOB",
-    "Christopher Street": "Chr",
-    "9th Street": "9St",
-    "14th Street": "14St",
-    "23rd Street": "23St",
+# Keyed on API `target` code — more stable than headsign which varies by route
+TARGET_ABBREVIATIONS = {
+    "33S": "33St",
+    "WTC": "WTC",
+    "JSQ": "JSQ",
+    "NWK": "Nwk",
+    "HOB": "HOB",
+    "CHR": "Chr",
+    "09S": "9St",
+    "14S": "14St",
+    "23S": "23St",
+    "NEW": "Nwk",
+    "HAR": "Har",
+    "EXP": "Exp",
 }
 
 # Abbreviate API message strings to fit the display
@@ -24,8 +28,12 @@ MESSAGE_ABBREV = {
 
 
 def _hex_to_rgb(hex_str: str) -> tuple:
-    h = hex_str.lstrip("#")
+    h = hex_str.strip().lstrip("#")
     return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+
+
+def _parse_colors(line_color: str) -> list:
+    return [_hex_to_rgb(c) for c in line_color.split(",")]
 
 
 def _mmss(seconds: int) -> str:
@@ -45,13 +53,18 @@ def _abbrev_message(msg: str) -> str:
 @dataclass
 class Arrival:
     headsign: str
-    color: tuple
+    target: str
+    colors: list  # list of (r,g,b); two entries means a combined route
     seconds_list: list = field(default_factory=list)
     message_list: list = field(default_factory=list)
 
     @property
+    def color(self) -> tuple:
+        return self.colors[0]
+
+    @property
     def abbreviated(self) -> str:
-        return ABBREVIATIONS.get(self.headsign, self.headsign[:4])
+        return TARGET_ABBREVIATIONS.get(self.target, self.headsign[:4])
 
     @property
     def next_seconds(self) -> int:
@@ -91,7 +104,8 @@ def get_arrivals(station_code: str, direction: str = "ToNY", max_trains: int = 2
     for msg in dir_data["messages"][:max_trains]:
         arrivals.append(Arrival(
             headsign=msg["headSign"],
-            color=_hex_to_rgb(msg["lineColor"]),
+            target=msg["target"],
+            colors=_parse_colors(msg["lineColor"]),
             seconds_list=[max(0, int(msg["secondsToArrival"]))],
             message_list=[msg["arrivalTimeMessage"]],
         ))
