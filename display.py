@@ -25,6 +25,11 @@ class MatrixDisplay:
             self._init_matrix()
 
     def _init_matrix(self):
+        # Load font before RGBMatrix init: the library drops root privileges
+        # to uid=daemon after hardware setup, losing access to /home/chialin6/.
+        self.font = rgb_graphics.Font()
+        self.font.LoadFont(self.args.font_path)
+
         options = RGBMatrixOptions()
         options.hardware_mapping = self.args.led_gpio_mapping
         options.rows = self.args.led_rows
@@ -32,9 +37,6 @@ class MatrixDisplay:
         options.gpio_slowdown = self.args.led_slowdown_gpio
         self.matrix = RGBMatrix(options=options)
         self.canvas = self.matrix.CreateFrameCanvas()
-
-        self.font = rgb_graphics.Font()
-        self.font.LoadFont(self.args.font_path)
 
     def render(self, arrivals):
         if HAS_MATRIX:
