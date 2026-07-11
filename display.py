@@ -84,7 +84,7 @@ class MatrixDisplay:
         dot_radius = 3
         dot_cx = 4        # circle center x (1px left padding from edge)
         text_x = 11       # text starts after dot + 1px extra gap
-        times_x = 46      # fixed column for arrival times (5-char name ends at x=40, 5px gap)
+        times_x = 45      # fixed column for arrival times (5-char name ends at x=40, 4px gap)
         row_baselines = [17, 28]
 
         for i, arrival in enumerate(arrivals[:2]):
