@@ -13,6 +13,7 @@ ANSI_DIM = "\033[2m"
 FONTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
 
 MATRIX_WIDTH = 64
+MATRIX_HEIGHT = 32
 TIME_RIGHT_PADDING = 2  # px gap between time text and right edge
 
 
@@ -58,8 +59,8 @@ class MatrixDisplay:
 
         options = RGBMatrixOptions()
         options.hardware_mapping = self.args.led_gpio_mapping
-        options.rows = self.args.led_rows
-        options.cols = self.args.led_cols
+        options.rows = MATRIX_HEIGHT
+        options.cols = MATRIX_WIDTH
         options.gpio_slowdown = self.args.led_slowdown_gpio
         self.matrix = RGBMatrix(options=options)
         self.canvas = self.matrix.CreateFrameCanvas()
