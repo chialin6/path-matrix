@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import os
-from datetime import datetime
 
 try:
     from rgbmatrix import RGBMatrix, RGBMatrixOptions, graphics as rgb_graphics
@@ -45,6 +44,8 @@ class MatrixDisplay:
         self.font_small = None  # 4x6 for header
         self.canvas = None
 
+        self._last_updated = ""
+
         if HAS_MATRIX:
             self._init_matrix()
 
@@ -68,12 +69,14 @@ class MatrixDisplay:
         self.canvas = self.matrix.CreateFrameCanvas()
 
     def render(self, arrivals, last_updated=""):
+        if last_updated:
+            self._last_updated = last_updated
         if HAS_MATRIX:
-            self._render_matrix(arrivals, last_updated)
+            self._render_matrix(arrivals)
         else:
-            self._render_terminal(arrivals, last_updated)
+            self._render_terminal(arrivals)
 
-    def _render_matrix(self, arrivals, last_updated=""):
+    def _render_matrix(self, arrivals):
         self.canvas.Clear()
 
         fmt = getattr(self.args, 'time_format', 'minutes')
@@ -81,8 +84,8 @@ class MatrixDisplay:
         grey = rgb_graphics.Color(110, 110, 110)
 
         # Header row: small grey text at top using 4x6 font
-        ts = last_updated if last_updated else datetime.now().strftime("%H:%M")
-        rgb_graphics.DrawText(self.canvas, self.font_small, 1, 6, grey, f"updated at {ts}")
+        if self._last_updated:
+            rgb_graphics.DrawText(self.canvas, self.font_small, 1, 6, grey, f"updated at {self._last_updated}")
 
         # Two arrival rows using 6x9 font
         # Layout: circle dot (radius 3) + gap + name + times at fixed col
@@ -108,11 +111,11 @@ class MatrixDisplay:
 
         self.canvas = self.matrix.SwapOnVSync(self.canvas)
 
-    def _render_terminal(self, arrivals, last_updated=""):
+    def _render_terminal(self, arrivals):
         fmt = getattr(self.args, 'time_format', 'minutes')
         print("\033[H\033[J", end="")
-        ts = last_updated if last_updated else datetime.now().strftime("%H:%M")
-        print(f"{ANSI_DIM}updated at {ts}{ANSI_RESET}")
+        if self._last_updated:
+            print(f"{ANSI_DIM}updated at {self._last_updated}{ANSI_RESET}")
         print("─" * 30)
 
         if not arrivals:
