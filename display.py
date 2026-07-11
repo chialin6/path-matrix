@@ -12,6 +12,9 @@ ANSI_DIM = "\033[2m"
 
 FONTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
 
+MATRIX_WIDTH = 64
+TIME_RIGHT_PADDING = 2  # px gap between time text and right edge
+
 
 def _ansi_fg(r, g, b):
     return f"\033[38;2;{r};{g};{b}m"
@@ -99,7 +102,7 @@ class MatrixDisplay:
 
             # Arrival times — right-aligned to the matrix edge
             time_str = arrival.times_message()
-            time_x = 64 - len(time_str) * 6
+            time_x = MATRIX_WIDTH - len(time_str) * 6 - TIME_RIGHT_PADDING
             rgb_graphics.DrawText(self.canvas, self.font, time_x, y, white, time_str)
 
         self.canvas = self.matrix.SwapOnVSync(self.canvas)
