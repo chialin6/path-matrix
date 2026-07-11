@@ -4,7 +4,9 @@ import os
 import time
 import sys
 
+from config import PATH_POLL_INTERVAL, WEATHER_POLL_INTERVAL
 from path_client import get_arrivals
+from weather_client import get_weather
 from display import MatrixDisplay
 
 
@@ -22,16 +24,34 @@ def main():
     args = parser.parse_args()
 
     display = MatrixDisplay(args)
-    print(f"Showing {args.direction} trains from {args.station} — refreshing every 20s")
+    print(f"Showing {args.direction} trains from {args.station}")
+
+    arrivals = []
+    last_updated = ""
+    weather = None
+    last_path_poll = 0
+    last_weather_poll = 0
 
     try:
         while True:
-            try:
-                arrivals, last_updated = get_arrivals(args.station, args.direction)
-                display.render(arrivals, last_updated)
-            except Exception as e:
-                print(f"Error fetching arrivals: {e}", file=sys.stderr)
-            time.sleep(20)
+            now = time.time()
+
+            if now - last_path_poll >= PATH_POLL_INTERVAL:
+                try:
+                    arrivals, last_updated = get_arrivals(args.station, args.direction)
+                except Exception as e:
+                    print(f"PATH error: {e}", file=sys.stderr)
+                last_path_poll = now
+
+            if now - last_weather_poll >= WEATHER_POLL_INTERVAL:
+                try:
+                    weather = get_weather()
+                except Exception as e:
+                    print(f"Weather error: {e}", file=sys.stderr)
+                last_weather_poll = now
+
+            display.render(arrivals, last_updated, weather)
+            time.sleep(1)
     except KeyboardInterrupt:
         print("\nStopped.")
 

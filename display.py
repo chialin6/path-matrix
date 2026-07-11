@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 import os
+import time
 
 try:
     from rgbmatrix import RGBMatrix, RGBMatrixOptions, graphics as rgb_graphics
     HAS_MATRIX = True
 except ImportError:
     HAS_MATRIX = False
+
+from config import TICKER_INTERVAL
 
 ANSI_RESET = "\033[0m"
 ANSI_DIM = "\033[2m"
@@ -16,10 +19,15 @@ MATRIX_WIDTH = 64
 MATRIX_HEIGHT = 32
 TIME_RIGHT_PADDING = 2  # px gap between time text and right edge
 
+# Ticker frame indices
+_FRAME_WEATHER = 0
+_FRAME_RAIN = 1
+_FRAME_UPDATED = 2
+_FRAME_COUNT = 3
+
 
 def _ansi_fg(r, g, b):
     return f"\033[38;2;{r};{g};{b}m"
-
 
 
 def _draw_circle(canvas, cx, cy, radius, colors):
@@ -42,6 +50,9 @@ class MatrixDisplay:
         self.canvas = None
 
         self._last_updated = ""
+        self._weather = None
+        self._ticker_frame = _FRAME_WEATHER
+        self._last_ticker_advance = time.time()
 
         if HAS_MATRIX:
             self._init_matrix()
@@ -65,9 +76,33 @@ class MatrixDisplay:
         self.matrix = RGBMatrix(options=options)
         self.canvas = self.matrix.CreateFrameCanvas()
 
-    def render(self, arrivals, last_updated=""):
+    def _advance_ticker(self):
+        now = time.time()
+        if now - self._last_ticker_advance >= TICKER_INTERVAL:
+            self._ticker_frame = (self._ticker_frame + 1) % _FRAME_COUNT
+            self._last_ticker_advance = now
+
+    def _build_header(self) -> str:
+        frame = self._ticker_frame
+        if frame == _FRAME_WEATHER and self._weather:
+            w = self._weather
+            return f"{w.feels_now}\xb0C ({w.feels_min}-{w.feels_max}\xb0C)"
+        elif frame == _FRAME_RAIN and self._weather:
+            w = self._weather
+            if w.rain_hour:
+                return f"rain @ {w.rain_hour} {w.rain_prob}%"
+            else:
+                return "no rain today"
+        elif frame == _FRAME_UPDATED and self._last_updated:
+            return f"updated @ {self._last_updated}"
+        return ""
+
+    def render(self, arrivals, last_updated="", weather=None):
         if last_updated:
             self._last_updated = last_updated
+        if weather is not None:
+            self._weather = weather
+        self._advance_ticker()
         if HAS_MATRIX:
             self._render_matrix(arrivals)
         else:
@@ -79,12 +114,10 @@ class MatrixDisplay:
         white = rgb_graphics.Color(255, 255, 255)
         grey = rgb_graphics.Color(110, 110, 110)
 
-        # Header row: small grey text at top using 4x6 font
-        if self._last_updated:
-            rgb_graphics.DrawText(self.canvas, self.font_small, 1, 6, grey, f"updated @ {self._last_updated}")
+        header = self._build_header()
+        if header:
+            rgb_graphics.DrawText(self.canvas, self.font_small, 1, 6, grey, header)
 
-        # Two arrival rows using 6x9 font
-        # Layout: circle dot (radius 3) + gap + name + times at fixed col
         dot_radius = 3
         dot_cx = 4        # circle center x (1px left padding from edge)
         text_x = 11       # text starts after dot + 1px extra gap
@@ -92,16 +125,12 @@ class MatrixDisplay:
 
         for i, arrival in enumerate(arrivals[:2]):
             y = row_baselines[i]
-            r, g, b = arrival.color
 
-            # Circle dot centered vertically on the text
             dot_cy = y - 3
             _draw_circle(self.canvas, dot_cx, dot_cy, dot_radius, arrival.colors)
 
-            # Destination abbreviation
             rgb_graphics.DrawText(self.canvas, self.font, text_x, y, white, arrival.abbreviated)
 
-            # Arrival times — right-aligned to the matrix edge
             time_str = arrival.times_message()
             time_x = MATRIX_WIDTH - len(time_str) * 6 - TIME_RIGHT_PADDING
             rgb_graphics.DrawText(self.canvas, self.font, time_x, y, white, time_str)
@@ -110,8 +139,9 @@ class MatrixDisplay:
 
     def _render_terminal(self, arrivals):
         print("\033[H\033[J", end="")
-        if self._last_updated:
-            print(f"{ANSI_DIM}updated @ {self._last_updated}{ANSI_RESET}")
+        header = self._build_header()
+        if header:
+            print(f"{ANSI_DIM}{header}{ANSI_RESET}")
         print("─" * 30)
 
         if not arrivals:
