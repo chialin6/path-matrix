@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 import requests
 from dataclasses import dataclass, field
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+_NY_TZ = ZoneInfo("America/New_York")
 
 API_URL = "https://www.panynj.gov/bin/portauthority/ridepath.json"
 
@@ -81,9 +85,9 @@ class Arrival:
 
 
 def _parse_last_updated(ts: str) -> str:
-    """Extract HH:MM from ISO 8601 timestamp: '2026-07-11T11:15:07.326228-04:00' → '11:15'."""
+    """Parse ISO 8601 timestamp and return HH:MM in New York time."""
     try:
-        return ts[11:16]
+        return datetime.fromisoformat(ts).astimezone(_NY_TZ).strftime("%H:%M")
     except Exception:
         return ""
 
