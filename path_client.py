@@ -28,6 +28,7 @@ TARGET_ABBREVIATIONS = {
 MESSAGE_ABBREV = {
     "Arriving": "Now",
     "Boarding": "Now",
+    "Delayed": "D",
 }
 
 
@@ -46,7 +47,7 @@ def _mmss(seconds: int) -> str:
 
 
 def _abbrev_message(msg: str) -> str:
-    """Shorten API message strings: '4 min' -> '4m', 'Arriving' -> 'Now'."""
+    """Shorten API message strings: '4 min' -> '4m', 'Arriving' -> 'Now', 'Delayed' -> 'D'."""
     if msg in MESSAGE_ABBREV:
         return MESSAGE_ABBREV[msg]
     if msg.endswith(" min"):
