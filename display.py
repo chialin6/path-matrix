@@ -22,7 +22,7 @@ TIME_RIGHT_PADDING = 2  # px gap between time text and right edge
 # Ticker frame indices
 _FRAME_WEATHER = 0
 _FRAME_RAIN = 1
-_FRAME_UPDATED = 2
+_FRAME_CLOCK = 2
 _FRAME_COUNT = 3
 
 
@@ -94,8 +94,8 @@ class MatrixDisplay:
                 return f"rain @ {w.rain_hour} {w.rain_prob}%"
             else:
                 return f"no rain in {RAIN_LOOKAHEAD_HOURS}hrs"
-        elif frame == _FRAME_UPDATED and self._last_updated:
-            return f"updated @ {self._last_updated}"
+        elif frame == _FRAME_CLOCK:
+            return time.strftime("Now %H:%M:%S")
         return ""
 
     def render(self, arrivals, last_updated="", weather=None):
