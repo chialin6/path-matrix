@@ -44,6 +44,11 @@ def main():
     # rather than briefly showing the JSON fallback during the handshake.
     STARTUP_GRACE = 10.0
     started = time.monotonic()
+    # Render several times a second so the header clock ticks cleanly without
+    # skipping seconds. display.render only pushes a new frame to the panel when
+    # the shown content changes, so this does not over-refresh the LEDs. Data
+    # reads stay cheap (SignalR is an in-memory cache; JSON is time-gated).
+    RENDER_INTERVAL = 0.25
 
     try:
         while True:
@@ -77,7 +82,7 @@ def main():
                 last_weather_poll = now
 
             display.render(arrivals, last_updated, weather)
-            time.sleep(1)
+            time.sleep(RENDER_INTERVAL)
     except KeyboardInterrupt:
         print("\nStopped.")
 
