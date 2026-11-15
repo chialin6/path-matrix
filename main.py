@@ -34,17 +34,11 @@ def main():
 
     arrivals = []
     last_updated = ""
-    captured = None          # time.monotonic() when `arrivals` was captured
     weather = None
     last_json_poll = 0.0
     last_weather_poll = 0.0
     last_source = None
 
-    # Render often so the countdown ticks smoothly; display.render only pushes a
-    # new frame to the panel when the shown value actually changes (no wasteful
-    # refresh). Data reads are cheap: SignalR is an in-memory cache read, and
-    # ridepath.json is still only polled every PATH_POLL_INTERVAL.
-    RENDER_INTERVAL = 0.25
     # On startup, give the live SignalR feed a moment to connect before falling
     # back to ridepath.json, so the primary source is live from the first frame
     # rather than briefly showing the JSON fallback during the handshake.
@@ -56,19 +50,18 @@ def main():
             now = time.time()
 
             # --- PATH data: SignalR primary (cheap cache read), JSON fallback ---
-            rt_arrivals, rt_updated, rt_captured = realtime.snapshot()
+            rt_arrivals, rt_updated = realtime.latest()
             if rt_arrivals:
-                arrivals, last_updated, captured = rt_arrivals, rt_updated, rt_captured
+                arrivals, last_updated = rt_arrivals, rt_updated
                 if last_source != "signalr":
                     print("PATH source: live SignalR feed", flush=True)
                     last_source = "signalr"
             elif time.monotonic() - started >= STARTUP_GRACE and (
-                now - last_json_poll >= PATH_POLL_INTERVAL or captured is None
+                now - last_json_poll >= PATH_POLL_INTERVAL or last_source is None
             ):
                 # Live feed isn't up after the grace window — use the JSON feed.
                 try:
                     arrivals, last_updated = get_arrivals(args.station, args.direction)
-                    captured = time.monotonic()
                     if last_source != "json":
                         print("PATH source: ridepath.json (fallback)", flush=True)
                         last_source = "json"
@@ -83,9 +76,8 @@ def main():
                     print(f"Weather error: {e}", file=sys.stderr)
                 last_weather_poll = now
 
-            elapsed = (time.monotonic() - captured) if captured is not None else 0.0
-            display.render(arrivals, last_updated, weather, elapsed=elapsed)
-            time.sleep(RENDER_INTERVAL)
+            display.render(arrivals, last_updated, weather)
+            time.sleep(1)
     except KeyboardInterrupt:
         print("\nStopped.")
 

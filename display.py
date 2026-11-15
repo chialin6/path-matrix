@@ -30,32 +30,6 @@ def _ansi_fg(r, g, b):
     return f"\033[38;2;{r};{g};{b}m"
 
 
-def _live_time_str(arrival, elapsed=0.0):
-    """Live countdown label for an arrival, ticking down with `elapsed` seconds.
-
-    - status words from the feed win: Delayed -> "D", Arriving/Boarding -> "Now"
-    - under 10 min: "M:SS" ticking every second (the live feel)
-    - 10 min or more: whole minutes "Xm" (keeps the label short on a 64px panel)
-    - at/under zero: "Now"
-    """
-    raw = (arrival.message_list[0] if arrival.message_list else "").strip()
-    rl = raw.lower()
-    if "delay" in rl:
-        return "D"
-    if rl in ("arriving", "boarding", "now"):
-        return "Now"
-    if not arrival.seconds_list:
-        return arrival.times_message()
-    secs = int(round(arrival.seconds_list[0] - elapsed))
-    if secs <= 0:
-        return "Now"
-    if secs >= 600:
-        # Far out: show the feed's own minute label (matches the app's rounding,
-        # e.g. "18m") rather than a live second count that doesn't fit anyway.
-        return arrival.times_message() or f"{secs // 60}m"
-    return f"{secs // 60}:{secs % 60:02d}"
-
-
 def _draw_circle(canvas, cx, cy, radius, colors):
     """Draw a filled circle. Two colors = left/right split for combined routes."""
     c1 = colors[0]
@@ -124,28 +98,27 @@ class MatrixDisplay:
             return f"updated @ {self._last_updated}"
         return ""
 
-    def render(self, arrivals, last_updated="", weather=None, elapsed=0.0):
+    def render(self, arrivals, last_updated="", weather=None):
         if last_updated:
             self._last_updated = last_updated
         if weather is not None:
             self._weather = weather
         self._advance_ticker()
         if HAS_MATRIX:
-            self._render_matrix(arrivals, elapsed)
+            self._render_matrix(arrivals)
         else:
-            self._render_terminal(arrivals, elapsed)
+            self._render_terminal(arrivals)
 
-    def _render_matrix(self, arrivals, elapsed=0.0):
+    def _render_matrix(self, arrivals):
         header = self._build_header()
 
         # Build the row contents once, then only push a new frame to the panel
-        # when something actually changed. This lets the caller render many
-        # times per second (smooth ticking) without over-refreshing the LEDs.
+        # when something actually changed, so we never over-refresh the LEDs.
         rows = []
         for arrival in arrivals[:2]:
             rows.append((
                 arrival.abbreviated,
-                _live_time_str(arrival, elapsed),
+                arrival.times_message(),
                 tuple(arrival.colors),
             ))
         sig = (header, tuple(rows))
@@ -178,7 +151,7 @@ class MatrixDisplay:
 
         self.canvas = self.matrix.SwapOnVSync(self.canvas)
 
-    def _render_terminal(self, arrivals, elapsed=0.0):
+    def _render_terminal(self, arrivals):
         print("\033[H\033[J", end="")
         header = self._build_header()
         if header:
@@ -197,4 +170,4 @@ class MatrixDisplay:
             else:
                 r, g, b = arrival.color
                 dot = f"{_ansi_fg(r, g, b)}●{ANSI_RESET}"
-            print(f"{dot} {arrival.abbreviated:<5} {_live_time_str(arrival, elapsed):>5}")
+            print(f"{dot} {arrival.abbreviated:<5} {arrival.times_message():>3}")

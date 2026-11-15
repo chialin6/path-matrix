@@ -99,18 +99,6 @@ class PathRealtime:
                 return [], ""
             return list(self._arrivals), self._last_updated_str
 
-    def snapshot(self):
-        """Return (list[Arrival], last_updated_str, captured_monotonic).
-
-        captured_monotonic is time.monotonic() when this data arrived, so the
-        caller can tick the countdown down live between updates. Returns
-        ([], "", None) when stale or empty.
-        """
-        with self._lock:
-            if not self._arrivals or (time.monotonic() - self._last_msg_ts) > _STALE_AFTER:
-                return [], "", None
-            return list(self._arrivals), self._last_updated_str, self._last_msg_ts
-
     def is_fresh(self):
         with self._lock:
             return bool(self._arrivals) and (time.monotonic() - self._last_msg_ts) <= _STALE_AFTER
