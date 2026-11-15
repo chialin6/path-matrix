@@ -6,6 +6,7 @@ import sys
 
 from config import PATH_POLL_INTERVAL, WEATHER_POLL_INTERVAL, STATION, DIRECTION
 from path_client import get_arrivals
+from path_signalr import PathRealtime
 from weather_client import get_weather
 from display import MatrixDisplay
 
@@ -26,21 +27,38 @@ def main():
     display = MatrixDisplay(args)
     print(f"Showing {args.direction} trains from {args.station}")
 
+    # Primary source: the RidePATH app's live SignalR feed (if configured in
+    # config.py). Runs in the background and caches the latest arrivals.
+    realtime = PathRealtime(args.station, args.direction)
+    realtime.start()
+
     arrivals = []
     last_updated = ""
     weather = None
     last_path_poll = 0
     last_weather_poll = 0
+    last_source = None
 
     try:
         while True:
             now = time.time()
 
             if now - last_path_poll >= PATH_POLL_INTERVAL:
-                try:
-                    arrivals, last_updated = get_arrivals(args.station, args.direction)
-                except Exception as e:
-                    print(f"PATH error: {e}", file=sys.stderr)
+                # Primary: live SignalR feed. Fallback: public ridepath.json.
+                rt_arrivals, rt_updated = realtime.latest()
+                if rt_arrivals:
+                    arrivals, last_updated = rt_arrivals, rt_updated
+                    if last_source != "signalr":
+                        print("PATH source: live SignalR feed")
+                        last_source = "signalr"
+                else:
+                    try:
+                        arrivals, last_updated = get_arrivals(args.station, args.direction)
+                        if last_source != "json":
+                            print("PATH source: ridepath.json (fallback)")
+                            last_source = "json"
+                    except Exception as e:
+                        print(f"PATH error: {e}", file=sys.stderr)
                 last_path_poll = now
 
             if now - last_weather_poll >= WEATHER_POLL_INTERVAL:

@@ -21,3 +21,13 @@ RAIN_LOOKAHEAD_HOURS = 8     # how many hours ahead to check for rain
 PATH_POLL_INTERVAL = 20      # seconds between PATH API calls
 WEATHER_POLL_INTERVAL = 900  # seconds between weather API calls (15 min)
 TICKER_INTERVAL = 4          # seconds each header frame is shown
+
+# --- Live SignalR feed (optional; primary PATH source when set) ---
+# The display uses the RidePATH app's realtime SignalR feed as the primary
+# source and falls back to the public ridepath.json when these are unset or
+# the live feed is unavailable. Leave as None to use ridepath.json only.
+# To enable, extract the token-broker URL (with its ?query key) and the bearer
+# token from the RidePATH Android app's `bf` class (fields bf.a / bf.b) and
+# paste them here. They rarely change but may rotate on an app update.
+SIGNALR_TOKEN_BROKER = None  # e.g. "https://panynj-path-af-tb.azurewebsites.net/api/tokenrequest?XXXX"
+SIGNALR_BEARER = None        # e.g. "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
