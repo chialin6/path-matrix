@@ -34,32 +34,39 @@ def main():
 
     arrivals = []
     last_updated = ""
+    captured = None          # time.monotonic() when `arrivals` was captured
     weather = None
-    last_path_poll = 0
-    last_weather_poll = 0
+    last_json_poll = 0.0
+    last_weather_poll = 0.0
     last_source = None
+
+    # Render often so the countdown ticks smoothly; display.render only pushes a
+    # new frame to the panel when the shown value actually changes (no wasteful
+    # refresh). Data reads are cheap: SignalR is an in-memory cache read, and
+    # ridepath.json is still only polled every PATH_POLL_INTERVAL.
+    RENDER_INTERVAL = 0.25
 
     try:
         while True:
             now = time.time()
 
-            if now - last_path_poll >= PATH_POLL_INTERVAL:
-                # Primary: live SignalR feed. Fallback: public ridepath.json.
-                rt_arrivals, rt_updated = realtime.latest()
-                if rt_arrivals:
-                    arrivals, last_updated = rt_arrivals, rt_updated
-                    if last_source != "signalr":
-                        print("PATH source: live SignalR feed")
-                        last_source = "signalr"
-                else:
-                    try:
-                        arrivals, last_updated = get_arrivals(args.station, args.direction)
-                        if last_source != "json":
-                            print("PATH source: ridepath.json (fallback)")
-                            last_source = "json"
-                    except Exception as e:
-                        print(f"PATH error: {e}", file=sys.stderr)
-                last_path_poll = now
+            # --- PATH data: SignalR primary (cheap cache read), JSON fallback ---
+            rt_arrivals, rt_updated, rt_captured = realtime.snapshot()
+            if rt_arrivals:
+                arrivals, last_updated, captured = rt_arrivals, rt_updated, rt_captured
+                if last_source != "signalr":
+                    print("PATH source: live SignalR feed", flush=True)
+                    last_source = "signalr"
+            elif now - last_json_poll >= PATH_POLL_INTERVAL or captured is None:
+                try:
+                    arrivals, last_updated = get_arrivals(args.station, args.direction)
+                    captured = time.monotonic()
+                    if last_source != "json":
+                        print("PATH source: ridepath.json (fallback)", flush=True)
+                        last_source = "json"
+                except Exception as e:
+                    print(f"PATH error: {e}", file=sys.stderr)
+                last_json_poll = now
 
             if now - last_weather_poll >= WEATHER_POLL_INTERVAL:
                 try:
@@ -68,8 +75,9 @@ def main():
                     print(f"Weather error: {e}", file=sys.stderr)
                 last_weather_poll = now
 
-            display.render(arrivals, last_updated, weather)
-            time.sleep(1)
+            elapsed = (time.monotonic() - captured) if captured is not None else 0.0
+            display.render(arrivals, last_updated, weather, elapsed=elapsed)
+            time.sleep(RENDER_INTERVAL)
     except KeyboardInterrupt:
         print("\nStopped.")
 
