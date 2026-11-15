@@ -6,6 +6,7 @@ import sys
 
 from config import PATH_POLL_INTERVAL, WEATHER_POLL_INTERVAL, STATION, DIRECTION
 from path_client import get_arrivals
+from path_signalr import PathRealtime
 from weather_client import get_weather
 from display import MatrixDisplay
 
@@ -26,22 +27,47 @@ def main():
     display = MatrixDisplay(args)
     print(f"Showing {args.direction} trains from {args.station}")
 
+    # Primary source: the RidePATH app's live SignalR feed (if configured in
+    # config.py). Runs in the background and caches the latest arrivals.
+    realtime = PathRealtime(args.station, args.direction)
+    realtime.start()
+
     arrivals = []
     last_updated = ""
     weather = None
-    last_path_poll = 0
-    last_weather_poll = 0
+    last_json_poll = 0.0
+    last_weather_poll = 0.0
+    last_source = None
+
+    # On startup, give the live SignalR feed a moment to connect before falling
+    # back to ridepath.json, so the primary source is live from the first frame
+    # rather than briefly showing the JSON fallback during the handshake.
+    STARTUP_GRACE = 10.0
+    started = time.monotonic()
 
     try:
         while True:
             now = time.time()
 
-            if now - last_path_poll >= PATH_POLL_INTERVAL:
+            # --- PATH data: SignalR primary (cheap cache read), JSON fallback ---
+            rt_arrivals, rt_updated = realtime.latest()
+            if rt_arrivals:
+                arrivals, last_updated = rt_arrivals, rt_updated
+                if last_source != "signalr":
+                    print("PATH source: live SignalR feed", flush=True)
+                    last_source = "signalr"
+            elif time.monotonic() - started >= STARTUP_GRACE and (
+                now - last_json_poll >= PATH_POLL_INTERVAL or last_source is None
+            ):
+                # Live feed isn't up after the grace window — use the JSON feed.
                 try:
                     arrivals, last_updated = get_arrivals(args.station, args.direction)
+                    if last_source != "json":
+                        print("PATH source: ridepath.json (fallback)", flush=True)
+                        last_source = "json"
                 except Exception as e:
                     print(f"PATH error: {e}", file=sys.stderr)
-                last_path_poll = now
+                last_json_poll = now
 
             if now - last_weather_poll >= WEATHER_POLL_INTERVAL:
                 try:

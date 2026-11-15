@@ -53,6 +53,7 @@ class MatrixDisplay:
         self._weather = None
         self._ticker_frame = _FRAME_WEATHER
         self._last_ticker_advance = time.time()
+        self._last_frame_sig = None  # last content pushed to the panel
 
         if HAS_MATRIX:
             self._init_matrix()
@@ -109,12 +110,26 @@ class MatrixDisplay:
             self._render_terminal(arrivals)
 
     def _render_matrix(self, arrivals):
-        self.canvas.Clear()
+        header = self._build_header()
 
+        # Build the row contents once, then only push a new frame to the panel
+        # when something actually changed, so we never over-refresh the LEDs.
+        rows = []
+        for arrival in arrivals[:2]:
+            rows.append((
+                arrival.abbreviated,
+                arrival.times_message(),
+                tuple(arrival.colors),
+            ))
+        sig = (header, tuple(rows))
+        if sig == self._last_frame_sig:
+            return
+        self._last_frame_sig = sig
+
+        self.canvas.Clear()
         white = rgb_graphics.Color(255, 255, 255)
         grey = rgb_graphics.Color(110, 110, 110)
 
-        header = self._build_header()
         if header:
             rgb_graphics.DrawText(self.canvas, self.font_small, 1, 6, grey, header)
 
@@ -123,15 +138,14 @@ class MatrixDisplay:
         text_x = 11       # text starts after dot + 1px extra gap
         row_baselines = [17, 28]
 
-        for i, arrival in enumerate(arrivals[:2]):
+        for i, (abbreviated, time_str, colors) in enumerate(rows):
             y = row_baselines[i]
 
             dot_cy = y - 3
-            _draw_circle(self.canvas, dot_cx, dot_cy, dot_radius, arrival.colors)
+            _draw_circle(self.canvas, dot_cx, dot_cy, dot_radius, colors)
 
-            rgb_graphics.DrawText(self.canvas, self.font, text_x, y, white, arrival.abbreviated)
+            rgb_graphics.DrawText(self.canvas, self.font, text_x, y, white, abbreviated)
 
-            time_str = arrival.times_message()
             time_x = MATRIX_WIDTH - len(time_str) * 6 - TIME_RIGHT_PADDING
             rgb_graphics.DrawText(self.canvas, self.font, time_x, y, white, time_str)
 
