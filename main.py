@@ -45,6 +45,11 @@ def main():
     # refresh). Data reads are cheap: SignalR is an in-memory cache read, and
     # ridepath.json is still only polled every PATH_POLL_INTERVAL.
     RENDER_INTERVAL = 0.25
+    # On startup, give the live SignalR feed a moment to connect before falling
+    # back to ridepath.json, so the primary source is live from the first frame
+    # rather than briefly showing the JSON fallback during the handshake.
+    STARTUP_GRACE = 10.0
+    started = time.monotonic()
 
     try:
         while True:
@@ -57,7 +62,10 @@ def main():
                 if last_source != "signalr":
                     print("PATH source: live SignalR feed", flush=True)
                     last_source = "signalr"
-            elif now - last_json_poll >= PATH_POLL_INTERVAL or captured is None:
+            elif time.monotonic() - started >= STARTUP_GRACE and (
+                now - last_json_poll >= PATH_POLL_INTERVAL or captured is None
+            ):
+                # Live feed isn't up after the grace window — use the JSON feed.
                 try:
                     arrivals, last_updated = get_arrivals(args.station, args.direction)
                     captured = time.monotonic()
