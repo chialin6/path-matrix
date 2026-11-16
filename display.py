@@ -95,7 +95,7 @@ class MatrixDisplay:
             else:
                 return f"no rain in {RAIN_LOOKAHEAD_HOURS}hrs"
         elif frame == _FRAME_CLOCK:
-            return time.strftime("Now %H:%M:%S")
+            return time.strftime("%-m/%-d %H:%M:%S")
         return ""
 
     def render(self, arrivals, last_updated="", weather=None):
